@@ -2,7 +2,7 @@
 
 import subprocess
 import time
-
+import os
 
 def read_status_percentage():
     command = "upower -i $(upower -e | grep BAT) | grep --color=never -E percentage|xargs|cut -d' ' -f2|sed s/%//"
@@ -16,28 +16,32 @@ def read_status_AC():
 
 def take_action():
     " the commands to run if charged over 90% or below 20% or 10% in case of danger."
-    state_danger = "notify-send 'charged less then 10%. Please save your work!' ""PC is about to shutdown"
+    state_danger = "notify-send 'charged less then 10%. Please save your work!'"
+    flag = 0
     while True:
         charge = int(read_status_percentage())
         state = read_status_AC()
-        print charge
         if charge >= 90 and 'charging' == state:
             charge_above = "notify-send -u critical 'charged over 90%. Please unplug your AC adapter!' "" Charging:{} ".format(
                 charge)
             subprocess.Popen(["/bin/bash", "-c", charge_above])
+            time.sleep(10)
         elif 20 >= charge >= 10 and 'discharging' == state:
             charge_below = "notify-send 'charged below 20%. Please plug your AC adapter!' "" Charging:{} ".format(
                 charge)
             subprocess.Popen(["/bin/bash", "-c", charge_below])
+            time.sleep(10)
         elif charge < 10:
             subprocess.Popen(["/bin/bash", "-c", state_danger])
             time.sleep(60)
-            # TODO: FOR EXAMPLE ADD SUSPEND COMMAND-LINE TO SAVE YOUR WORK
-            ".........................."
-
+            if 'discharging' == state and flag == 0:
+                flag = 1
+                subprocess.Popen(["/bin/bash", "-c", 'gnome-screensaver-command -l'])
+                
+            elif 'charging' == state:
+                flag = 1
+                os.system("spd-say 'Good Job'")
+                
         else:
-            " No need for notifications during the interval (gap) [20-90]"
-            " Make your favorable loop notifications timing in time.sleep() function 10 second for example"
-        time.sleep(10)
-
+            time.sleep(120)
 take_action()
